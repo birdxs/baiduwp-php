@@ -67,8 +67,7 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
- 
-      - name: Build and push the Debian based image
+      - name: Push image
           IMAGE_ID=birdxs/$IMAGE_NAME
           IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
           VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
@@ -76,7 +75,8 @@ jobs:
           [ "$VERSION" == "master" ] && VERSION=latest
           echo IMAGE_ID=$IMAGE_ID
           echo VERSION=$VERSION
-          docker tag $IMAGE_NAME $IMAGE_ID:$VERSION 
+          docker tag $IMAGE_NAME $IMAGE_ID:$VERSION  
+      - name: Build and push the Debian based image
         id: docker_build_debian
         uses: docker/build-push-action@v4
         with:
@@ -88,7 +88,6 @@ jobs:
           platforms: linux/amd64,linux/arm64,linux/arm/v7
      
           push: true
-
           tags: ${{ steps.docker_meta_debian.outputs.tags }}
           labels: ${{ steps.docker_meta_debian.outputs.labels }}
 
