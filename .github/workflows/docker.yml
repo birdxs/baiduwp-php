@@ -79,7 +79,8 @@ jobs:
             #DOCKER_GEN_VERSION=${{ steps.docker-gen_version.outputs.VERSION }}          
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           push: true
-          tags: ${{ steps.docker_meta_debian.outputs.tags }}
+          #tags: ${{ steps.docker_meta_debian.outputs.tags }}
+          tags: "birdxs/baiduwp,birdxs/baiduwp:latest"
           labels: ${{ steps.docker_meta_debian.outputs.labels }}
 
       - name: Images digests
