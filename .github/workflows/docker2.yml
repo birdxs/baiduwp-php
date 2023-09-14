@@ -1,5 +1,7 @@
 name: Build Docker Image
-
+#最接近成功的一次，登陆dockerhub正常，只是编译出错提示
+#ERROR: tag is needed when pushing to registry
+#Error: buildx failed with: ERROR: tag is needed when pushing to registry
 on:
   workflow_dispatch:
   push:
