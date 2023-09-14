@@ -69,6 +69,14 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
  
       - name: Build and push the Debian based image
+          IMAGE_ID=birdxs/$IMAGE_NAME
+          IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
+          VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
+          [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
+          [ "$VERSION" == "master" ] && VERSION=latest
+          echo IMAGE_ID=$IMAGE_ID
+          echo VERSION=$VERSION
+          docker tag $IMAGE_NAME $IMAGE_ID:$VERSION 
         id: docker_build_debian
         uses: docker/build-push-action@v4
         with:
@@ -78,15 +86,9 @@ jobs:
             BAIDUWP_VERSION=${{ steps.baiduwp_version.outputs.VERSION }}
             #DOCKER_GEN_VERSION=${{ steps.docker-gen_version.outputs.VERSION }}          
           platforms: linux/amd64,linux/arm64,linux/arm/v7
+     
           push: true
-                    IMAGE_ID=birdxs/$IMAGE_NAME
-          IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
-          VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
-          [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
-          [ "$VERSION" == "master" ] && VERSION=latest
-          echo IMAGE_ID=$IMAGE_ID
-          echo VERSION=$VERSION
-          docker tag $IMAGE_NAME $IMAGE_ID:$VERSION
+
           tags: ${{ steps.docker_meta_debian.outputs.tags }}
           labels: ${{ steps.docker_meta_debian.outputs.labels }}
 
