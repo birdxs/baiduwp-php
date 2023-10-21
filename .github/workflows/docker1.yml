@@ -7,39 +7,77 @@ on:
   #push:
     branches:
       - main
+    tags:
+      - v*
     paths-ignore:
       - "test/*"
       - "LICENSE"
       - "*.md"
-    tags:
-      - v*
+
 
 env:
   # 设置 docker 镜像名
   IMAGE_NAME: baiduwp-php
 
+
 jobs:
-  # Push image to GitHub Packages.
-  # See also https://docs.docker.com/docker-hub/builds/
-  push:
-  #2023.9.14修改runs-on: ubuntu-latest后面加-arm64
-  #加-arm64编译不通过，去掉
+  multiarch-build-debian:
+    name: Build and publish Debian image
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-        # 构建镜像，指定镜像名
-      - name: Build image
-        run: docker build . --file Dockerfile --tag $IMAGE_NAME
-        # 登录到 dockerhub，使用 GitHub secrets 传入账号密码，密码被加密存储在 GitHub 服务器
-      - name: Docker login
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Retrieve baiduwp version
+        id: baiduwp_version
+        run: echo "VERSION=$(git describe --tags)" >> "$GITHUB_OUTPUT"
+
+      - name: Get Docker tags for Debian based image
+        id: docker_meta_debian
+        uses: docker/metadata-action@v4
+        with:
+          images: |
+            ghcr.io/birdxs/baiduwp
+            birdxs/baiduwp
+            #jwilder/baiduwp
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable={{is_default_branch}}
+          labels: |
+            org.opencontainers.image.authors=birdxs <birdxs001@gmail.com> (@buchdag), Jason Wilder
+            org.opencontainers.image.version=${{ steps.baiduwp_version.outputs.VERSION }}
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to DockerHub
         uses: docker/login-action@v2
         with:
-            #设置两个secrets: docker的用户名和密码,先用dockerhub试验一下
-          username: "${{ secrets.DOCKERHUB_USERNAME }}"
-          password: "${{ secrets.DOCKERHUB_PASSWORD }}"
-      #- name: Log into registry
-      #  run: echo "${{ secrets.DOCKER_ACCESS_TOKEN }}" | docker login -u yuantuo666 --password-stdin
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+ 
+      - name: Build and push the Debian based image
+        id: docker_build_debian
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: Dockerfile
+          build-args: |
+            BAIDUWP_VERSION=${{ steps.baiduwp_version.outputs.VERSION }}
+            #DOCKER_GEN_VERSION=${{ steps.docker-gen_version.outputs.VERSION }}          
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
       - name: Push image
         run: |
           # 拼接镜像 id，这个镜像 id 就是在使用 docker 镜像时 pull 后面的名字。
@@ -66,4 +104,7 @@ jobs:
           # push 到 latest
           [ "$VERSION" != "latest" ] && docker tag $IMAGE_NAME $IMAGE_ID:latest
           [ "$VERSION" != "latest" ] && docker push $IMAGE_ID:latest
-          
+
+      - name: Images digests
+        run: echo ${{ steps.docker_build_debian.outputs.digest }}
+        
