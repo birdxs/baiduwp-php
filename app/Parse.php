@@ -268,18 +268,19 @@ class Parse
 
 			$query = Db::connect()->table("account")->where('status', 0);
 			if (config('baiduwp.random_account')) {
-				$query = $query->order('last_used_at', 'desc');
+				$query = $query->order('last_used_at', 'asc');
 			} else {
 				$query = $query->order('created_at', 'asc');
 			}
 			$data = $query->find();
 			if ($data) {
 				list($ID, $cookie) = [$data['id'], $data['cookie']];
+				// 更新最后使用时间
+				Db::connect()->table('account')->where('id', $ID)->update(['last_used_at' => date('Y-m-d H:i:s', time())]);
 			}
 		}
 
 		$SVIP_BDUSS = Tool::getSubstr($cookie, 'BDUSS=', ';');
-		$SVIP_STOKEN = Tool::getSubstr($cookie, 'STOKEN=', ';');
 
 		// 开始获取真实链接
 		$headerArray = array('User-Agent: LogStatistic', 'Cookie: BDUSS=' . $SVIP_BDUSS . ';');
@@ -450,11 +451,13 @@ class Parse
 
 	private static function realLinkError($body_decode, $message): array
 	{
-		$ErrorCode = $body_decode["errno"] ?? 999;
+		$ErrorCode = $body_decode["errno"] ?? ($body_decode["error_code"] ?? 999);
 		$ErrorMessage = [
 			8001 => "SVIP 账号可能被限制，请检查 SVIP 的 Cookie 是否设置正确且有效",
 			9013 => "SVIP 账号被限制，请检查更换 SVIP 账号",
 			9019 => "SVIP 账号可能被限制，请检查 SVIP 的 Cookie 是否设置正确且有效",
+			31360 => "下载链接超时，请刷新页面重试。若重试后仍报错，请检查普通帐号 Cookie 是否过期",
+			31362 => "下载链接签名错误，请检查 UA 是否正确",
 			999 => "错误 -> " . json_encode($body_decode)
 		];
 
