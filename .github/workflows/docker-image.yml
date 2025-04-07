@@ -1,4 +1,4 @@
-name: Build Docker Image
+name: Build Docker Image    #2025.4.8 04:16更新，自己创建的，不是同步过来的
 
 on:
   workflow_dispatch:
@@ -78,32 +78,10 @@ jobs:
             BAIDUWP_VERSION=${{ steps.baiduwp_version.outputs.VERSION }}
             #DOCKER_GEN_VERSION=${{ steps.docker-gen_version.outputs.VERSION }}          
           platforms: linux/amd64,linux/arm64,linux/arm/v7
-      - name: Push image
-        run: |
-          # 拼接镜像 id，这个镜像 id 就是在使用 docker 镜像时 pull 后面的名字。
-          IMAGE_ID=birdxs/$IMAGE_NAME
-
-          # 将所有的大写字母转为小写
-          IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
-
-          # 从 GitHub.ref 中取出版本
-          VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
-
-          # 从 tag 名字中替换 v 字符
-          [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
-
-          # Use Docker `latest` tag convention
-          [ "$VERSION" == "master" ] && VERSION=latest
-
-          echo IMAGE_ID=$IMAGE_ID
-          echo VERSION=$VERSION
-          # 设置镜像 id 和版本号
-          docker tag $IMAGE_NAME $IMAGE_ID:$VERSION
-          # 进行 push
-          docker push $IMAGE_ID:$VERSION
-          # push 到 latest
-          [ "$VERSION" != "latest" ] && docker tag $IMAGE_NAME $IMAGE_ID:latest
-          [ "$VERSION" != "latest" ] && docker push $IMAGE_ID:latest
+          push: true
+          #tags: ${{ steps.docker_meta_debian.outputs.tags }}
+          tags: "birdxs/baiduwp,birdxs/baiduwp:latest"
+          labels: ${{ steps.docker_meta_debian.outputs.labels }}
 
       - name: Images digests
         run: echo ${{ steps.docker_build_debian.outputs.digest }}
